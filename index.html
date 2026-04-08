@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neon Serpent Arena</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb orb-one"></div>
+    <div class="bg-orb orb-two"></div>
+
+    <main class="game-shell">
+      <header class="hud">
+        <div class="hud-card">
+          <p class="label">P1 Score</p>
+          <p id="score" class="value">0</p>
+        </div>
+        <div class="hud-card">
+          <p class="label">Coins</p>
+          <p id="coins" class="value">0</p>
+        </div>
+        <div id="p2-card" class="hud-card hidden-card">
+          <p class="label">P2 Score</p>
+          <p id="p2-score" class="value">0</p>
+        </div>
+        <div class="hud-card">
+          <p class="label">Best</p>
+          <p id="best" class="value">0</p>
+        </div>
+        <div class="hud-card hint">
+          <p class="label">Controls</p>
+          <p id="controls-text" class="value small">P1: WASD/Arrows + Space boost</p>
+        </div>
+      </header>
+
+      <section class="arena-wrap">
+        <canvas id="game" aria-label="Snake game canvas"></canvas>
+
+        <aside class="arena-ui">
+          <div class="panel">
+            <p class="label">Minimap</p>
+            <canvas id="minimap" width="180" height="180" aria-label="Minimap"></canvas>
+          </div>
+          <div class="panel">
+            <p class="label">Leaderboard</p>
+            <ol id="leaderboard" class="leaderboard"></ol>
+          </div>
+        </aside>
+
+        <div id="overlay" class="overlay hidden" role="dialog" aria-live="polite">
+          <div class="overlay-card">
+            <h1>Neon Serpent Arena</h1>
+            <p id="overlay-text">Eat pellets. Avoid your body. Hold boost to dash.</p>
+            <div class="settings-grid">
+              <div>
+                <label class="mode-label" for="mode-select">Mode</label>
+                <select id="mode-select" class="mode-select">
+                  <option value="solo">Solo + Bots</option>
+                  <option value="duo">2 Players + Bots</option>
+                </select>
+              </div>
+              <div>
+                <label class="mode-label" for="bot-select">Bots</label>
+                <select id="bot-select" class="mode-select">
+                  <option value="2">2</option>
+                  <option value="4">4</option>
+                  <option value="6" selected>6</option>
+                  <option value="8">8</option>
+                </select>
+              </div>
+              <div>
+                <label class="mode-label" for="arena-select">Arena</label>
+                <select id="arena-select" class="mode-select">
+                  <option value="small">Small</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="large">Large</option>
+                </select>
+              </div>
+              <div>
+                <label class="mode-label" for="skin-select">Skin</label>
+                <select id="skin-select" class="mode-select"></select>
+              </div>
+              <div>
+                <label class="mode-label" for="hat-select">Hat</label>
+                <select id="hat-select" class="mode-select"></select>
+              </div>
+              <div>
+                <label class="mode-label" for="necklace-select">Necklace</label>
+                <select id="necklace-select" class="mode-select"></select>
+              </div>
+            </div>
+            <p id="progress-text" class="progress-text"></p>
+            <ul id="summary" class="summary"></ul>
+            <p id="countdown" class="countdown"></p>
+            <button id="start-btn" type="button">Start Run</button>
+            <a class="online-link" href="online.html">Try Online Multiplayer</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="touch-controls" aria-label="Touch controls">
+        <div id="joystick-base" class="joystick-base" aria-label="Movement joystick" role="application">
+          <div id="joystick-knob" class="joystick-knob"></div>
+        </div>
+        <button class="touch-btn boost-btn" data-dir="boost">Boost</button>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
