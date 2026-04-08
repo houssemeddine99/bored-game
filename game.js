@@ -9,6 +9,8 @@ const p2CardEl = document.getElementById("p2-card");
 const p2ScoreEl = document.getElementById("p2-score");
 const bestEl = document.getElementById("best");
 const controlsTextEl = document.getElementById("controls-text");
+const comboTextEl = document.getElementById("combo-text");
+const missionTextEl = document.getElementById("mission-text");
 const progressTextEl = document.getElementById("progress-text");
 const leaderboardEl = document.getElementById("leaderboard");
 const overlay = document.getElementById("overlay");
@@ -16,14 +18,23 @@ const overlayText = document.getElementById("overlay-text");
 const summaryEl = document.getElementById("summary");
 const countdownEl = document.getElementById("countdown");
 const startBtn = document.getElementById("start-btn");
+const quickStartBtn = document.getElementById("quick-start-btn");
 const modeSelectEl = document.getElementById("mode-select");
 const botSelectEl = document.getElementById("bot-select");
 const arenaSelectEl = document.getElementById("arena-select");
+const rulesSelectEl = document.getElementById("rules-select");
+const difficultySelectEl = document.getElementById("difficulty-select");
 const skinSelectEl = document.getElementById("skin-select");
 const hatSelectEl = document.getElementById("hat-select");
 const necklaceSelectEl = document.getElementById("necklace-select");
 const joystickBaseEl = document.getElementById("joystick-base");
 const joystickKnobEl = document.getElementById("joystick-knob");
+const joystickSenseEl = document.getElementById("joystick-sense");
+const handednessSelectEl = document.getElementById("handedness-select");
+const vibrationToggleEl = document.getElementById("vibration-toggle");
+const touchControlsEl = document.querySelector(".touch-controls");
+const settingsBtnEl = document.getElementById("settings-btn");
+const settingsPanelEl = document.getElementById("settings-panel");
 
 const WORLD = { width: 2800, height: 2800 };
 const ARENA_SIZE = {
@@ -50,13 +61,18 @@ const BASE_SPEED = 7.2;
 const BOOST_MULTIPLIER = 1.65;
 const FOOD_COUNT = 150;
 const START_LENGTH = 16;
-const BOOST_SHED_INTERVAL = 0.08;
+const BOOST_SHED_INTERVAL = 0.11;
 const BOT_SPEED_MIN = 5.8;
 const BOT_SPEED_MAX = 7.4;
-const FOOD_COMBO_WINDOW = 2.2;
-const KILL_COMBO_WINDOW = 8;
+const FOOD_COMBO_WINDOW = 2;
+const KILL_COMBO_WINDOW = 6;
 const CAMERA_LERP = 0.16;
 const PARTICLE_MAX = 500;
+const SETTINGS_KEY = "serpent-settings-v1";
+const MISSION_KEY = "serpent-daily-missions-v1";
+const SUDDEN_START_AFTER = 35;
+const SUDDEN_SHRINK_INTERVAL = 20;
+const SUDDEN_SHRINK_CELLS = 2;
 
 const BOT_PERSONALITIES = [
   { id: "scavenger", tag: "Scav", speedBias: 0.15 },
@@ -67,6 +83,14 @@ const BOT_PERSONALITIES = [
 
 const PROFILE_KEY = "serpent-profile-v2";
 const BEST_KEY = "serpent-best";
+
+const DAILY_MISSIONS = [
+  { id: "food_40", label: "Eat 40 food", metric: "food", target: 40, reward: 35 },
+  { id: "big_8", label: "Eat 8 big food", metric: "bigFood", target: 8, reward: 45 },
+  { id: "kills_3", label: "Get 3 kills", metric: "kills", target: 3, reward: 60 },
+  { id: "survive_180", label: "Survive 180s", metric: "survival", target: 180, reward: 50 },
+  { id: "boost_70", label: "Boost for 70s", metric: "boost", target: 70, reward: 40 },
+];
 
 const SKINS = [
   { id: "sprout", name: "Sprout", unlockPoints: 0, colorHead: "#eaffef", colorBody: [90, 240, 130] },
@@ -114,10 +138,48 @@ let bestScore = Number(localStorage.getItem(BEST_KEY) || 0);
 let countdownActive = false;
 let profile = loadProfile();
 let progressMessageTimer = 0;
+let mobileSettings = loadGameSettings();
 let joystickState = {
   active: false,
   pointerId: null,
 };
+
+function loadGameSettings() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    return {
+      joystickSensitivity: Number(parsed.joystickSensitivity || 1),
+      handedness: parsed.handedness === "left" ? "left" : "right",
+      vibration: parsed.vibration !== false,
+    };
+  } catch {
+    return { joystickSensitivity: 1, handedness: "right", vibration: true };
+  }
+}
+
+function saveGameSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(mobileSettings));
+}
+
+function applyTouchLayout() {
+  if (!touchControlsEl) return;
+  touchControlsEl.classList.toggle("left-handed", mobileSettings.handedness === "left");
+}
+
+function syncSettingsControls() {
+  if (joystickSenseEl) joystickSenseEl.value = String(mobileSettings.joystickSensitivity);
+  if (handednessSelectEl) handednessSelectEl.value = mobileSettings.handedness;
+  if (vibrationToggleEl) vibrationToggleEl.checked = mobileSettings.vibration;
+
+  applyTouchLayout();
+}
+
+function vibratePulse(ms) {
+  if (!mobileSettings.vibration) return;
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    navigator.vibrate(ms);
+  }
+}
 
 function loadProfile() {
   try {
@@ -227,7 +289,26 @@ function getSettings() {
     mode: modeSelectEl.value,
     botCount: Number(botSelectEl.value || 6),
     arenaSize: arenaSelectEl.value || "medium",
+    ruleset: rulesSelectEl ? rulesSelectEl.value : "classic",
+    botDifficulty: difficultySelectEl ? difficultySelectEl.value : "normal",
   };
+}
+
+function getActiveBoundsCells() {
+  const margin = state && state.settings && state.settings.ruleset === "sudden" ? state.suddenDeath.marginCells : 0;
+  const maxX = WORLD.width / CELL - 1;
+  const maxY = WORLD.height / CELL - 1;
+  return {
+    minX: margin,
+    minY: margin,
+    maxX: Math.max(margin + 5, maxX - margin),
+    maxY: Math.max(margin + 5, maxY - margin),
+  };
+}
+
+function isOutsideActiveBounds(cell) {
+  const b = getActiveBoundsCells();
+  return cell.x < b.minX || cell.y < b.minY || cell.x > b.maxX || cell.y > b.maxY;
 }
 
 function randomFoodType(forceBig = false) {
@@ -253,6 +334,41 @@ function makeFoodAt(cell, forceBig = false) {
     growth: meta.growth,
     radius: meta.radius,
   };
+}
+
+function getDifficultyProfile(level) {
+  if (level === "easy") return { speedMul: 0.9, greed: 0.86, commit: 0.62 };
+  if (level === "hard") return { speedMul: 1.08, greed: 1.15, commit: 0.95 };
+  return { speedMul: 1, greed: 1, commit: 0.82 };
+}
+
+function getDayKey() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function createDailyMissions() {
+  const dayKey = getDayKey();
+  try {
+    const saved = JSON.parse(localStorage.getItem(MISSION_KEY) || "{}");
+    if (saved.dayKey === dayKey && Array.isArray(saved.missions) && saved.missions.length) {
+      return saved.missions;
+    }
+  } catch {
+    // Ignore malformed cache and regenerate.
+  }
+
+  const shuffled = [...DAILY_MISSIONS].sort(() => Math.random() - 0.5);
+  const missions = shuffled.slice(0, 3).map((m) => ({ ...m, progress: 0, completed: false }));
+  localStorage.setItem(MISSION_KEY, JSON.stringify({ dayKey, missions }));
+  return missions;
+}
+
+function saveDailyMissions(missions) {
+  localStorage.setItem(MISSION_KEY, JSON.stringify({ dayKey: getDayKey(), missions }));
 }
 
 function resetState() {
@@ -299,6 +415,7 @@ function resetState() {
   const botCount = settings.mode === "duo" ? Math.max(1, settings.botCount - 2) : settings.botCount;
   const bots = createBots(botCount, players);
   const blocked = collectAllSegments([...players, ...bots]);
+  const missions = createDailyMissions();
 
   state = {
     settings,
@@ -314,6 +431,19 @@ function resetState() {
     food: spawnFood(FOOD_COUNT, blocked),
     powerups: [],
     powerupPopups: [],
+    missions,
+    matchStats: {
+      food: 0,
+      bigFood: 0,
+      kills: 0,
+      survival: 0,
+      boost: 0,
+    },
+    suddenDeath: {
+      timer: 0,
+      marginCells: 0,
+      nextShrinkAt: SUDDEN_START_AFTER,
+    },
     particles: [],
     screenFx: {
       shakeTime: 0,
@@ -327,6 +457,7 @@ function resetState() {
 
   updateHud();
   updateLeaderboard();
+  updateMissionText();
   applyModeUi();
   updateProgressText();
 }
@@ -373,8 +504,8 @@ function nowSec() {
 }
 
 function recalcComboMultiplier(combo) {
-  const foodBonus = Math.min(0.75, Math.floor(combo.foodChain / 4) * 0.12);
-  const killBonus = Math.min(1.35, combo.killChain * 0.22);
+  const foodBonus = Math.min(0.6, Math.floor(combo.foodChain / 5) * 0.1);
+  const killBonus = Math.min(1, combo.killChain * 0.16);
   combo.multiplier = 1 + foodBonus + killBonus;
   return combo.multiplier;
 }
@@ -407,11 +538,12 @@ function registerKillCombo(killer) {
   combo.lastKillAt = t;
 
   const mult = recalcComboMultiplier(combo);
-  const streakBonusCoins = 6 * combo.killChain;
+  const streakBonusCoins = 4 * combo.killChain;
   profile.coins += streakBonusCoins;
   state.coinsEarned += streakBonusCoins;
   saveProfile();
   updateHud();
+  progressMission("kills", 1);
 
   showProgressMessage(`${killer.name} streak ${combo.killChain}! x${mult.toFixed(2)} +${streakBonusCoins} coins`);
 }
@@ -433,6 +565,43 @@ function decayCombos() {
   }
 }
 
+function updateMissionText() {
+  if (!missionTextEl || !state || !state.missions || !state.missions.length) return;
+  const next = state.missions.find((m) => !m.completed) || state.missions[0];
+  missionTextEl.textContent = next.completed
+    ? "All daily missions done"
+    : `${next.label} (${next.progress}/${next.target})`;
+}
+
+function progressMission(metric, amount) {
+  if (!state || !state.missions) return;
+
+  let changed = false;
+  for (const mission of state.missions) {
+    if (mission.completed || mission.metric !== metric) continue;
+
+    const before = mission.progress;
+    mission.progress = Math.min(mission.target, mission.progress + amount);
+    if (mission.progress !== before) changed = true;
+
+    if (mission.progress >= mission.target) {
+      mission.completed = true;
+      profile.coins += mission.reward;
+      state.coinsEarned += mission.reward;
+      showProgressMessage(`Mission complete: ${mission.label} (+${mission.reward} coins)`);
+      vibratePulse(40);
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    saveProfile();
+    saveDailyMissions(state.missions);
+    updateHud();
+    updateMissionText();
+  }
+}
+
 function applyModeUi() {
   const isDuo = state.settings.mode === "duo";
   p2CardEl.classList.toggle("show-card", isDuo);
@@ -450,6 +619,7 @@ function randomStart() {
 
 function createBots(amount, existingSnakes) {
   const bots = [];
+  const difficulty = getDifficultyProfile(state ? state.settings.botDifficulty : getSettings().botDifficulty);
 
   for (let i = 0; i < amount; i += 1) {
     const personality = BOT_PERSONALITIES[i % BOT_PERSONALITIES.length];
@@ -463,7 +633,7 @@ function createBots(amount, existingSnakes) {
       necklace: "none",
       start: randomStart(),
       dir: Object.values(DIR)[Math.floor(Math.random() * 4)],
-      speed: BOT_SPEED_MIN + Math.random() * (BOT_SPEED_MAX - BOT_SPEED_MIN) + personality.speedBias,
+      speed: (BOT_SPEED_MIN + Math.random() * (BOT_SPEED_MAX - BOT_SPEED_MIN) + personality.speedBias) * difficulty.speedMul,
       length: 12 + Math.floor(Math.random() * 7),
       type: "bot",
     });
@@ -759,7 +929,7 @@ function bindTouchButtons() {
 function bindVirtualJoystick() {
   if (!joystickBaseEl || !joystickKnobEl) return;
 
-  const maxRadius = 34;
+  const maxRadiusBase = 34;
 
   const resetJoystick = () => {
     joystickState.active = false;
@@ -778,6 +948,7 @@ function bindVirtualJoystick() {
     let dx = event.clientX - centerX;
     let dy = event.clientY - centerY;
     const dist = Math.hypot(dx, dy);
+    const maxRadius = maxRadiusBase * mobileSettings.joystickSensitivity;
 
     if (dist > maxRadius) {
       const k = maxRadius / dist;
@@ -833,6 +1004,62 @@ function bindOverlay() {
     startBtn.textContent = "Resume";
     countdownEl.textContent = "";
   });
+
+  if (quickStartBtn) {
+    quickStartBtn.addEventListener("click", () => {
+      if (state.gameOver) {
+        resetState();
+      }
+      if (!state.startedAt) state.startedAt = performance.now();
+      state.running = true;
+      overlay.classList.add("hidden");
+      startBtn.textContent = "Resume";
+      countdownEl.textContent = "";
+    });
+  }
+}
+
+function bindGameSettings() {
+  if (settingsBtnEl && settingsPanelEl) {
+    settingsBtnEl.addEventListener("click", () => {
+      settingsPanelEl.classList.toggle("collapsed");
+    });
+  }
+
+  const onJoystickSense = (value) => {
+    mobileSettings.joystickSensitivity = Math.max(0.6, Math.min(1.8, Number(value) || 1));
+    saveGameSettings();
+    syncSettingsControls();
+  };
+
+  const onHandedness = (value) => {
+    mobileSettings.handedness = value === "left" ? "left" : "right";
+    saveGameSettings();
+    syncSettingsControls();
+  };
+
+  const onVibration = (value) => {
+    mobileSettings.vibration = Boolean(value);
+    saveGameSettings();
+    syncSettingsControls();
+  };
+
+  if (joystickSenseEl) joystickSenseEl.addEventListener("input", (e) => onJoystickSense(e.target.value));
+  if (handednessSelectEl) handednessSelectEl.addEventListener("change", (e) => onHandedness(e.target.value));
+  if (vibrationToggleEl) vibrationToggleEl.addEventListener("change", (e) => onVibration(e.target.checked));
+
+  const onRules = (value) => {
+    if (rulesSelectEl) rulesSelectEl.value = value;
+    if (!state.running) resetState();
+  };
+
+  const onDifficulty = (value) => {
+    if (difficultySelectEl) difficultySelectEl.value = value;
+    if (!state.running) resetState();
+  };
+
+  if (rulesSelectEl) rulesSelectEl.addEventListener("change", (e) => onRules(e.target.value));
+  if (difficultySelectEl) difficultySelectEl.addEventListener("change", (e) => onDifficulty(e.target.value));
 }
 
 async function playCountdown() {
@@ -863,6 +1090,13 @@ function updateHud() {
   coinsEl.textContent = String(profile.coins);
   p2ScoreEl.textContent = String(p2 ? p2.score : 0);
   bestEl.textContent = String(bestScore);
+
+  if (comboTextEl) {
+    const combo = p1 && p1.combo ? p1.combo : { multiplier: 1, foodChain: 0, killChain: 0 };
+    comboTextEl.textContent = `x${combo.multiplier.toFixed(2)} F${combo.foodChain} K${combo.killChain}`;
+  }
+
+  updateMissionText();
 }
 
 function updateLeaderboard() {
@@ -903,6 +1137,10 @@ function showOverlay(message, buttonLabel) {
   startBtn.textContent = buttonLabel;
   countdownEl.textContent = "";
   overlay.classList.remove("hidden");
+
+  if (settingsPanelEl && buttonLabel === "Start Run") {
+    settingsPanelEl.classList.remove("collapsed");
+  }
 }
 
 function awardKillCoins(killer, victim) {
@@ -1046,6 +1284,22 @@ function buildMatchSummary() {
 function step(dtSec) {
   if (!state.running) return;
 
+  state.matchStats.survival += dtSec;
+  while (state.matchStats.survival >= 1) {
+    state.matchStats.survival -= 1;
+    progressMission("survival", 1);
+  }
+
+  if (state.settings.ruleset === "sudden") {
+    state.suddenDeath.timer += dtSec;
+    if (state.suddenDeath.timer >= state.suddenDeath.nextShrinkAt) {
+      state.suddenDeath.marginCells += SUDDEN_SHRINK_CELLS;
+      state.suddenDeath.nextShrinkAt += SUDDEN_SHRINK_INTERVAL;
+      showProgressMessage("Sudden death zone is shrinking!");
+      vibratePulse(20);
+    }
+  }
+
   decayCombos();
   updateEffects(dtSec);
 
@@ -1125,6 +1379,12 @@ function step(dtSec) {
     }
 
     if (canBoost) {
+      state.matchStats.boost += dtSec;
+      while (state.matchStats.boost >= 1) {
+        state.matchStats.boost -= 1;
+        progressMission("boost", 1);
+      }
+
       snake.boostShedTimer += dtSec;
 
       while (snake.boostShedTimer >= BOOST_SHED_INTERVAL) {
@@ -1132,8 +1392,8 @@ function step(dtSec) {
 
         if (snake.segments.length > 10) {
           const tail = snake.segments.pop();
-          if (tail && gameFoodCount() < MAX_FOOD) {
-            state.food.push(makeFoodAt({ x: tail.x, y: tail.y }));
+          if (tail && gameFoodCount() < MAX_FOOD && Math.random() < 0.8) {
+            state.food.push(makeFoodAt({ x: tail.x, y: tail.y }, Math.random() < 0.06));
           }
         }
       }
@@ -1293,7 +1553,7 @@ function willCollide(snake, dir) {
   const head = snake.segments[0];
   const next = { x: head.x + dir.x, y: head.y + dir.y };
 
-  if (next.x < 0 || next.y < 0 || next.x >= WORLD.width / CELL || next.y >= WORLD.height / CELL) return true;
+  if (isOutsideActiveBounds(next)) return true;
 
   for (const other of [...state.players, ...state.bots]) {
     if (!other.alive) continue;
@@ -1330,7 +1590,7 @@ function advanceSnakeOneCell(snake) {
   const head = snake.segments[0];
   const next = { x: head.x + snake.dir.x, y: head.y + snake.dir.y };
 
-  if (next.x < 0 || next.y < 0 || next.x >= WORLD.width / CELL || next.y >= WORLD.height / CELL) {
+  if (isOutsideActiveBounds(next)) {
     if (snake.type === "bot") {
       handleSnakeDeath(snake, null);
       respawnBot(snake);
@@ -1397,6 +1657,8 @@ function advanceSnakeOneCell(snake) {
         snake.growth += food.growth;
         snake.score += food.value;
         registerFoodCombo(snake, food.value);
+        progressMission("food", 1);
+        if (food.type === "big") progressMission("bigFood", 1);
         const sparkle = food.type === "big" ? "rgba(255,188,120,0.95)" : "rgba(255,232,160,0.9)";
         spawnParticles(next.x * CELL + CELL / 2, next.y * CELL + CELL / 2, food.type === "big" ? 13 : 8, sparkle, 25, 110, 0.18, 0.35, 2.1);
         if (food.type === "big") {
@@ -1570,6 +1832,19 @@ function drawBounds(camX, camY, w, h) {
     if (y > 0) ctx.fillRect(0, 0, w, y);
     if (x + WORLD.width < w) ctx.fillRect(x + WORLD.width, 0, w - (x + WORLD.width), h);
     if (y + WORLD.height < h) ctx.fillRect(0, y + WORLD.height, w, h - (y + WORLD.height));
+  }
+
+  if (state.settings.ruleset === "sudden" && state.suddenDeath.marginCells > 0) {
+    const b = getActiveBoundsCells();
+    const sx = b.minX * CELL - camX;
+    const sy = b.minY * CELL - camY;
+    const sw = (b.maxX - b.minX + 1) * CELL;
+    const sh = (b.maxY - b.minY + 1) * CELL;
+    ctx.strokeStyle = "rgba(255, 92, 92, 0.75)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    ctx.strokeRect(sx, sy, sw, sh);
+    ctx.setLineDash([]);
   }
 }
 
@@ -2119,10 +2394,16 @@ function init() {
   populatePropOptions(necklaceSelectEl, NECKLACES, profile.ownedNecklaces, profile.selectedNecklace);
 
   resetState();
+  syncSettingsControls();
   bindKeyboard();
   bindTouchButtons();
   bindVirtualJoystick();
   bindOverlay();
+  bindGameSettings();
+
+  if (settingsPanelEl) {
+    settingsPanelEl.classList.remove("collapsed");
+  }
 
   const refreshSetup = () => {
     if (!state.running) {
@@ -2135,7 +2416,7 @@ function init() {
 
       saveProfile();
       resetState();
-      showOverlay("Pick mode, skin, props, and settings, then hit start.", "Start Run");
+      showOverlay("Open Settings, choose your setup, then hit Start.", "Start Run");
       clearSummary();
     }
   };
@@ -2143,6 +2424,8 @@ function init() {
   modeSelectEl.addEventListener("change", refreshSetup);
   botSelectEl.addEventListener("change", refreshSetup);
   arenaSelectEl.addEventListener("change", refreshSetup);
+  if (rulesSelectEl) rulesSelectEl.addEventListener("change", refreshSetup);
+  if (difficultySelectEl) difficultySelectEl.addEventListener("change", refreshSetup);
   skinSelectEl.addEventListener("change", refreshSetup);
   hatSelectEl.addEventListener("change", refreshSetup);
   necklaceSelectEl.addEventListener("change", refreshSetup);
@@ -2154,7 +2437,7 @@ function init() {
 
   updateProgressText();
   updateHud();
-  showOverlay("Pick mode, skin, props, and settings, then hit start.", "Start Run");
+  showOverlay("Open Settings, choose your setup, then hit Start.", "Start Run");
 
   cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(frame);

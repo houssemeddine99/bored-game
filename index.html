@@ -32,6 +32,14 @@
           <p class="label">Controls</p>
           <p id="controls-text" class="value small">P1: WASD/Arrows + Space boost</p>
         </div>
+        <div class="hud-card">
+          <p class="label">Combo</p>
+          <p id="combo-text" class="value small">x1.00</p>
+        </div>
+        <div class="hud-card">
+          <p class="label">Mission</p>
+          <p id="mission-text" class="value small">Loading...</p>
+        </div>
       </header>
 
       <section class="arena-wrap">
@@ -51,16 +59,15 @@
         <div id="overlay" class="overlay hidden" role="dialog" aria-live="polite">
           <div class="overlay-card">
             <h1>Neon Serpent Arena</h1>
-            <p id="overlay-text">Eat pellets. Avoid your body. Hold boost to dash.</p>
-            <div class="settings-grid">
-              <div>
+            <p id="overlay-text">Use Settings to choose mode, bots, skins and game options. Then tap Start.</p>
+            <div class="settings-panel-wrap">
+              <button id="settings-btn" type="button" class="settings-btn">Settings</button>
+              <div id="settings-panel" class="settings-panel collapsed">
                 <label class="mode-label" for="mode-select">Mode</label>
                 <select id="mode-select" class="mode-select">
                   <option value="solo">Solo + Bots</option>
                   <option value="duo">2 Players + Bots</option>
                 </select>
-              </div>
-              <div>
                 <label class="mode-label" for="bot-select">Bots</label>
                 <select id="bot-select" class="mode-select">
                   <option value="2">2</option>
@@ -68,32 +75,49 @@
                   <option value="6" selected>6</option>
                   <option value="8">8</option>
                 </select>
-              </div>
-              <div>
                 <label class="mode-label" for="arena-select">Arena</label>
                 <select id="arena-select" class="mode-select">
                   <option value="small">Small</option>
                   <option value="medium" selected>Medium</option>
                   <option value="large">Large</option>
                 </select>
-              </div>
-              <div>
+                <label class="mode-label" for="rules-select">Rules</label>
+                <select id="rules-select" class="mode-select">
+                  <option value="classic" selected>Classic</option>
+                  <option value="sudden">Sudden Death Zone</option>
+                </select>
+                <label class="mode-label" for="difficulty-select">Bot AI</label>
+                <select id="difficulty-select" class="mode-select">
+                  <option value="easy">Easy</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="hard">Hard</option>
+                </select>
                 <label class="mode-label" for="skin-select">Skin</label>
                 <select id="skin-select" class="mode-select"></select>
-              </div>
-              <div>
                 <label class="mode-label" for="hat-select">Hat</label>
                 <select id="hat-select" class="mode-select"></select>
-              </div>
-              <div>
                 <label class="mode-label" for="necklace-select">Necklace</label>
                 <select id="necklace-select" class="mode-select"></select>
+                <label class="mode-label" for="joystick-sense">Joystick Sensitivity</label>
+                <input id="joystick-sense" type="range" min="0.6" max="1.8" step="0.1" value="1" />
+                <label class="mode-label" for="handedness-select">Touch Layout</label>
+                <select id="handedness-select" class="mode-select">
+                  <option value="right" selected>Right-handed</option>
+                  <option value="left">Left-handed</option>
+                </select>
+                <label class="check-row" for="vibration-toggle">
+                  <input id="vibration-toggle" type="checkbox" checked />
+                  <span>Vibration feedback</span>
+                </label>
               </div>
             </div>
             <p id="progress-text" class="progress-text"></p>
             <ul id="summary" class="summary"></ul>
             <p id="countdown" class="countdown"></p>
-            <button id="start-btn" type="button">Start Run</button>
+            <div class="start-actions">
+              <button id="start-btn" type="button">Start Run</button>
+              <button id="quick-start-btn" type="button" class="secondary-btn">Quick Start</button>
+            </div>
             <a class="online-link" href="online.html">Try Online Multiplayer</a>
           </div>
         </div>
