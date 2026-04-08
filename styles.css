@@ -447,22 +447,73 @@ button:hover {
   }
 
   .hud {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.15rem;
+    scrollbar-width: thin;
+  }
+
+  .hud-card {
+    min-width: 148px;
+    padding: 0.5rem 0.62rem;
+    border-radius: 14px;
+    flex: 0 0 auto;
+  }
+
+  .label {
+    font-size: 0.64rem;
+  }
+
+  .value {
+    font-size: 1.05rem;
+    margin-top: 0.2rem;
+  }
+
+  .value.small {
+    font-size: 0.8rem;
+    line-height: 1.25;
   }
 
   .hint {
-    grid-column: span 2;
+    min-width: 220px;
   }
 
   .arena-wrap {
-    min-height: 56vh;
+    min-height: 64vh;
     border-radius: 18px;
   }
 
   .arena-ui {
-    width: 160px;
-    top: 0.5rem;
-    right: 0.5rem;
+    width: 122px;
+    top: 0.35rem;
+    right: 0.35rem;
+    gap: 0.35rem;
+  }
+
+  .panel {
+    border-radius: 12px;
+    padding: 0.32rem;
+  }
+
+  .panel .label {
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+  }
+
+  #minimap {
+    border-radius: 7px;
+  }
+
+  .leaderboard {
+    margin-top: 0.3rem;
+    font-size: 0.74rem;
+    padding-left: 0.95rem;
+  }
+
+  .leaderboard li:nth-child(n + 6) {
+    display: none;
   }
 
   .overlay {
@@ -490,8 +541,23 @@ button:hover {
     right: 0;
     bottom: 0;
     z-index: 25;
-    padding: 0.55rem 0.85rem calc(0.55rem + env(safe-area-inset-bottom));
+    padding: 0.45rem 0.7rem calc(0.5rem + env(safe-area-inset-bottom));
     background: linear-gradient(180deg, rgba(6, 13, 8, 0), rgba(6, 13, 8, 0.85) 46%, rgba(6, 13, 8, 0.95));
+  }
+
+  .joystick-base {
+    width: 96px;
+    height: 96px;
+  }
+
+  .joystick-knob {
+    width: 40px;
+    height: 40px;
+  }
+
+  .boost-btn {
+    min-width: 90px;
+    min-height: 50px;
   }
 
   .settings-grid {
@@ -515,6 +581,14 @@ button:hover {
   }
 
   .value {
-    font-size: 1.15rem;
+    font-size: 1rem;
+  }
+
+  .arena-ui {
+    width: 108px;
+  }
+
+  .leaderboard {
+    font-size: 0.68rem;
   }
 }
