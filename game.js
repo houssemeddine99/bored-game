@@ -33,6 +33,7 @@ const joystickSenseEl = document.getElementById("joystick-sense");
 const handednessSelectEl = document.getElementById("handedness-select");
 const vibrationToggleEl = document.getElementById("vibration-toggle");
 const touchControlsEl = document.querySelector(".touch-controls");
+const fullscreenBtnEl = document.getElementById("fullscreen-btn");
 const settingsBtnEl = document.getElementById("settings-btn");
 const settingsPanelEl = document.getElementById("settings-panel");
 
@@ -139,6 +140,8 @@ let countdownActive = false;
 let profile = loadProfile();
 let progressMessageTimer = 0;
 let mobileSettings = loadGameSettings();
+let fullscreenModeRequested = false;
+let nativeFullscreenActive = false;
 let joystickState = {
   active: false,
   pointerId: null,
@@ -164,6 +167,76 @@ function saveGameSettings() {
 function applyTouchLayout() {
   if (!touchControlsEl) return;
   touchControlsEl.classList.toggle("left-handed", mobileSettings.handedness === "left");
+}
+
+function isFullscreenActive() {
+  return fullscreenModeRequested || nativeFullscreenActive;
+}
+
+function syncFullscreenUi() {
+  document.body.classList.toggle("fullscreen-mode", isFullscreenActive());
+
+  if (fullscreenBtnEl) {
+    fullscreenBtnEl.textContent = isFullscreenActive() ? "Exit fullscreen" : "Fullscreen";
+    fullscreenBtnEl.setAttribute("aria-pressed", String(isFullscreenActive()));
+  }
+
+  resizeCanvas();
+}
+
+async function enterFullscreenMode() {
+  fullscreenModeRequested = true;
+  syncFullscreenUi();
+
+  if (document.documentElement.requestFullscreen) {
+    try {
+      await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+    } catch {
+      // Fall back to the CSS fullscreen mode below.
+    }
+  }
+
+  if (screen.orientation && typeof screen.orientation.lock === "function") {
+    try {
+      await screen.orientation.lock("landscape");
+    } catch {
+      // Some browsers and iPhones block orientation locking.
+    }
+  }
+
+  syncFullscreenUi();
+}
+
+async function exitFullscreenMode() {
+  fullscreenModeRequested = false;
+
+  if (document.fullscreenElement && document.exitFullscreen) {
+    try {
+      await document.exitFullscreen();
+    } catch {
+      // Ignore and drop back to the CSS layout.
+    }
+  }
+
+  if (screen.orientation && typeof screen.orientation.unlock === "function") {
+    try {
+      screen.orientation.unlock();
+    } catch {
+      // Ignore unsupported unlock calls.
+    }
+  }
+
+  nativeFullscreenActive = false;
+  syncFullscreenUi();
+}
+
+async function toggleFullscreenMode() {
+  if (isFullscreenActive()) {
+    await exitFullscreenMode();
+    return;
+  }
+
+  await enterFullscreenMode();
 }
 
 function syncSettingsControls() {
@@ -904,6 +977,8 @@ function bindTouchButtons() {
   buttons.forEach((button) => {
     const dir = button.dataset.dir;
 
+    if (!dir) return;
+
     button.addEventListener("pointerdown", () => {
       const p1 = state.players[0];
       if (!p1) return;
@@ -1017,6 +1092,19 @@ function bindOverlay() {
       countdownEl.textContent = "";
     });
   }
+}
+
+function bindFullscreenButton() {
+  if (!fullscreenBtnEl) return;
+
+  fullscreenBtnEl.addEventListener("click", () => {
+    toggleFullscreenMode();
+  });
+
+  document.addEventListener("fullscreenchange", () => {
+    nativeFullscreenActive = Boolean(document.fullscreenElement);
+    syncFullscreenUi();
+  });
 }
 
 function bindGameSettings() {
@@ -2398,6 +2486,7 @@ function init() {
   bindKeyboard();
   bindTouchButtons();
   bindVirtualJoystick();
+  bindFullscreenButton();
   bindOverlay();
   bindGameSettings();
 

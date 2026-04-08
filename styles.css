@@ -405,6 +405,10 @@ button:hover {
   border: 1px solid rgba(133, 255, 159, 0.45);
 }
 
+.fullscreen-btn {
+  min-width: 112px;
+}
+
 .touch-btn[data-dir="boost"] {
   background: rgba(255, 209, 102, 0.25);
   border-color: rgba(255, 209, 102, 0.65);
@@ -413,6 +417,69 @@ button:hover {
 .boost-btn {
   min-width: 100px;
   min-height: 56px;
+}
+
+body.fullscreen-mode {
+  overflow: hidden;
+}
+
+body.fullscreen-mode .bg-orb,
+body.fullscreen-mode .hud,
+body.fullscreen-mode .arena-ui {
+  display: none;
+}
+
+body.fullscreen-mode .game-shell {
+  width: 100vw;
+  max-width: none;
+  min-height: 100dvh;
+  padding: 0;
+  gap: 0;
+}
+
+body.fullscreen-mode .arena-wrap {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+body.fullscreen-mode .touch-controls {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  margin: 0;
+  padding: 0.35rem 0.5rem calc(0.45rem + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(3, 8, 5, 0), rgba(3, 8, 5, 0.75) 38%, rgba(3, 8, 5, 0.92));
+}
+
+body.fullscreen-mode .joystick-base {
+  width: 92px;
+  height: 92px;
+}
+
+body.fullscreen-mode .joystick-knob {
+  width: 38px;
+  height: 38px;
+}
+
+body.fullscreen-mode .fullscreen-btn,
+body.fullscreen-mode .boost-btn {
+  min-height: 48px;
+}
+
+body.fullscreen-mode .fullscreen-btn {
+  min-width: 108px;
+}
+
+body.fullscreen-mode .overlay {
+  position: fixed;
 }
 
 @keyframes rise {
@@ -555,6 +622,14 @@ button:hover {
     height: 40px;
   }
 
+  .mid-row {
+    align-items: center;
+  }
+
+  .fullscreen-btn {
+    min-width: 104px;
+  }
+
   .boost-btn {
     min-width: 90px;
     min-height: 50px;
@@ -590,5 +665,9 @@ button:hover {
 
   .leaderboard {
     font-size: 0.68rem;
+  }
+
+  .fullscreen-btn {
+    min-width: 96px;
   }
 }
